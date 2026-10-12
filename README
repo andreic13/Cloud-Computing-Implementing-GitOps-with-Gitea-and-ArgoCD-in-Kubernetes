@@ -1,0 +1,65 @@
+Instructiuni de Reproducere si Testare - Calu Andrei-Daniel (343C1)
+
+Acest document descrie pasii necesari pentru a recrea intreaga infrastructura
+si pentru a testa functionalitatile proiectului.
+
+
+1. Reproducerea Infrastructurii (Ramp-up)
+
+Pentru a automatiza procesul de creare a clusterului, instalarea serviciilor
+(Gitea, ArgoCD) si configurarea aplicatiei, rulati scriptul inclus in arhiva:
+
+    chmod +x ramp-up.sh
+    ./ramp-up.sh
+
+Nota: Scriptul presupune existenta directorului manifests/ in aceeasi locatie,
+continand fisierele YAML necesare.
+
+
+2. Testarea Functionalitatilor
+
+Task 4: Verificare Reverse Proxy si Aplicatie
+
+Dupa rularea scriptului, aplicatia este gestionata de ArgoCD.
+Pentru a o accesa din browser:
+
+    1. Porniti port-forward:
+       kubectl port-forward svc/cloud-courses-service 8085:80
+
+    2. Accesati: http://localhost:8085
+
+    3. Logica: Nginx (port 80) actioneaza ca Reverse Proxy si redirectioneaza
+       traficul catre containerul cloud-courses (port 3000) din interiorul
+       aceluiasi Pod.
+
+----------
+
+Task 5: Verificare Liveness Probe
+
+Am configurat un Liveness Probe pe containerul de Nginx.
+Puteti verifica activitatea acestuia astfel:
+
+    1. Rulati:
+       kubectl describe pod <nume_pod_cloud_courses>
+
+    2. Verificati sectiunea Events. Veti observa ca la pornire, Liveness
+       Probe-ul esueaza initial pana cand Nginx este complet gata, cauzand
+       un restart al containerului (auto-healing).
+
+----------
+
+Task 6: Verificare Helm Packaging
+
+Scriptul a generat automat arhiva cloud-courses-chart-0.1.0.tgz.
+
+    - Pachetul a fost urcat in Gitea Package Registry.
+    - Pentru a testa instalarea manuala din acest pachet, puteti sterge resursele:
+
+      kubectl delete application cloud-courses-app -n argocd
+      kubectl delete deployment cloud-courses-deployment
+      kubectl delete svc cloud-courses-service
+      kubectl delete configmap nginx-proxy-config
+
+   - Iar, mai apoi, rulati:
+
+      helm install cloud-courses-test ./cloud-courses-chart-0.1.0.tgz
